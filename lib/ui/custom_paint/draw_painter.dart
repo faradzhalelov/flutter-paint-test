@@ -3,14 +3,11 @@ import 'package:flutter/material.dart';
 class DrawingPainter extends CustomPainter {
   final List<Offset> points;
   final bool isEditMode;
-  final Offset panOffset;
   final Offset startPoint;
   final Offset endPoint;
 
   DrawingPainter(this.points, this.isEditMode,
-      {required this.panOffset,
-      required this.startPoint,
-      required this.endPoint});
+      {required this.startPoint, required this.endPoint});
 
   // bool checkLineIntersection(Offset p1, Offset p2, Offset p3, Offset p4) {
   //   final x1 = p1.dx;
@@ -117,7 +114,6 @@ class DrawingPainter extends CustomPainter {
   bool shouldRepaint(DrawingPainter oldDelegate) {
     return oldDelegate.startPoint != startPoint ||
         oldDelegate.endPoint != endPoint ||
-        oldDelegate.panOffset != panOffset ||
         oldDelegate.points != points ||
         oldDelegate.isEditMode != isEditMode;
   }

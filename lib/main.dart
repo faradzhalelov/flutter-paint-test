@@ -2,7 +2,6 @@ import 'dart:developer';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:paint_gpt/model/canvas_state.dart';
 import 'package:paint_gpt/utils/utils.dart';
 
 import 'providers/providers.dart';
@@ -23,8 +22,6 @@ class MyApp extends ConsumerWidget {
     final size = MediaQuery.of(context).size;
     final points = ref.watch(pointsProvider);
     final isEditMode = ref.watch(modeProvider);
-    final canvasState = ref.watch(canvasStateProvider);
-    final panOffset = ref.watch(panOffsetProvider);
     final startPoint = ref.watch(startPointProvider);
     final endPoint = ref.watch(endPointProvider);
     return MaterialApp(
@@ -46,54 +43,36 @@ class MyApp extends ConsumerWidget {
                     ),
                   ),
                   Positioned.fill(
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.copy,
-                      child: GestureDetector(
-                        onTapDown: isEditMode && points.length >= 3
-                            ? (details) {
-                                final offset = details.localPosition;
+                    child: GestureDetector(
+                      onTapDown: isEditMode && points.length >= 3
+                          ? (details) {
+                              final offset = details.localPosition;
 
-                                for (int i = 0; i < points.length; i++) {
-                                  final point = points[i];
-                                  final distance = math.sqrt(
-                                      math.pow(point.dx - offset.dx, 2) +
-                                          math.pow(point.dy - offset.dy, 2));
-                                  if (distance < 10.0) {
-                                    ref
-                                        .read(
-                                            selectedPointIndexProvider.notifier)
-                                        .update((state) => i);
-                                    break;
-                                  }
+                              for (int i = 0; i < points.length; i++) {
+                                final point = points[i];
+                                final distance = math.sqrt(
+                                    math.pow(point.dx - offset.dx, 2) +
+                                        math.pow(point.dy - offset.dy, 2));
+                                if (distance < 10.0) {
+                                  ref
+                                      .read(selectedPointIndexProvider.notifier)
+                                      .update((state) => i);
+                                  break;
                                 }
                               }
-                            : null,
-                        onPanStart: (details) {
-                          if (canvasState == CanvasState.draw) {
-                            onPanStart(details.localPosition, ref);
-                            log('PAN START');
-                          }
-                        },
-                        onPanUpdate: (details) {
-                          log('PAN UPDATE');
-
-                          if (canvasState == CanvasState.pan) {
-                            ref
-                                .read(panOffsetProvider.notifier)
-                                .update((state) => panOffset + details.delta);
-                          } else {
-                            onPanUpdate(details.localPosition, ref);
-                          }
-                        },
-                        onPanEnd: (details) => onPanEnd(ref),
-                        child: CustomPaint(
-                          painter: DrawingPainter(
-                            startPoint: startPoint,
-                            endPoint: endPoint,
-                            points,
-                            isEditMode,
-                            panOffset: panOffset,
-                          ),
+                            }
+                          : null,
+                      onPanStart: (details) =>
+                          onPanStart(details.localPosition, ref),
+                      onPanUpdate: (details) =>
+                          onPanUpdate(details.localPosition, ref),
+                      onPanEnd: (details) => onPanEnd(ref),
+                      child: CustomPaint(
+                        painter: DrawingPainter(
+                          startPoint: startPoint,
+                          endPoint: endPoint,
+                          points,
+                          isEditMode,
                         ),
                       ),
                     ),
@@ -122,23 +101,6 @@ class MyApp extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  Positioned(
-                    top: 12,
-                    right: 8,
-                    child: IconButton(
-                      onPressed: () {
-                        // ref.read(canvasStateProvider.notifier).update((state) =>
-                        //     canvasState == CanvasState.draw
-                        //         ? CanvasState.pan
-                        //         : CanvasState.draw);
-                      },
-                      icon: const Icon(
-                        Icons.back_hand,
-                        color: iconColor,
-                        size: 24,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -154,38 +116,35 @@ class MyApp extends ConsumerWidget {
 
   void onPanEnd(WidgetRef ref) {
     log('PAN END');
-    final canvasState = ref.read(canvasStateProvider);
     final isEditMode = ref.read(modeProvider);
     final points = ref.read(pointsProvider);
-    if (canvasState == CanvasState.draw) {
-      if (!isEditMode) {
-        ref.read(undoStackProvider.notifier).state.add([...points]);
-        ref.read(redoStackProvider.notifier).update((state) => []);
-        final updatePoints = points;
-        final startPoint = ref.read(startPointProvider);
-        final endPoint = ref.read(endPointProvider);
+    if (!isEditMode) {
+      ref.read(undoStackProvider.notifier).state.add([...points]);
+      ref.read(redoStackProvider.notifier).update((state) => []);
+      final updatePoints = points;
+      final startPoint = ref.read(startPointProvider);
+      final endPoint = ref.read(endPointProvider);
 
-        if (points.isEmpty) {
-          updatePoints.add(startPoint);
-        }
-
-        updatePoints.add(endPoint);
-        ref.read(pointsProvider.notifier).update((state) => updatePoints);
+      if (points.isEmpty) {
+        updatePoints.add(startPoint);
       }
 
-      ref.read(selectedPointIndexProvider.notifier).update((state) => null);
-      ref.read(startPointProvider.notifier).update((state) => Offset.zero);
-      ref.read(endPointProvider.notifier).update((state) => Offset.zero);
+      updatePoints.add(endPoint);
+      ref.read(pointsProvider.notifier).update((state) => updatePoints);
+    }
 
-      if (!isEditMode && points.length > 2) {
-        final firstPoint = points.first;
-        final lastPoint = points.last;
+    ref.read(selectedPointIndexProvider.notifier).update((state) => null);
+    ref.read(startPointProvider.notifier).update((state) => Offset.zero);
+    ref.read(endPointProvider.notifier).update((state) => Offset.zero);
 
-        final distance = math.sqrt(math.pow(firstPoint.dx - lastPoint.dx, 2) +
-            math.pow(firstPoint.dy - lastPoint.dy, 2));
-        if (distance < 200.0) {
-          ref.read(modeProvider.notifier).update((state) => true);
-        }
+    if (!isEditMode && points.length > 2) {
+      final firstPoint = points.first;
+      final lastPoint = points.last;
+
+      final distance = math.sqrt(math.pow(firstPoint.dx - lastPoint.dx, 2) +
+          math.pow(firstPoint.dy - lastPoint.dy, 2));
+      if (distance < 200.0) {
+        ref.read(modeProvider.notifier).update((state) => true);
       }
     }
   }

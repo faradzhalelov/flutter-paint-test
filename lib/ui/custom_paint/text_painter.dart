@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -37,11 +39,18 @@ class CustomTextPainter extends CustomPainter {
           ),
           textDirection: TextDirection.ltr,
         );
-
+        final x = (endPoint.dy - startPoint.dy);
+        //TODO:
         textPainter.layout();
         final textOffset = Offset(
-          (startPoint.dx + endPoint.dx - textPainter.width) / 2,
-          (startPoint.dy + endPoint.dy - textPainter.height) / 2,
+          (startPoint.dx + endPoint.dx - textPainter.width) /
+              (x < 1
+                  ? 1.7
+                  : x > 1
+                      ? 2
+                      : 2.2),
+          (startPoint.dy + endPoint.dy - textPainter.height) /
+              (x < 1 ? 1.9 : 2),
         );
         final matrix4 = Matrix4.identity()
           ..translate(textOffset.dx, textOffset.dy)
